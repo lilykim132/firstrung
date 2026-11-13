@@ -1,0 +1,17 @@
+{
+  "name": "firstrung",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FirstRung MVP: AI mock interviews plus requests for live practice with real people.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@upstash/redis": "^1.41.0"
+  }
+}
