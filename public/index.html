@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FirstRung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a ladder. Four rungs (Set up → Answer → Feedback → Real person) run down the side; the work happens in one card beside them. */
+:root{
+  --paper:#ffffff; --surface:#ffffff; --field:#ffffff; --ink:#151a2d; --muted:#5b6279; --line:#e7e9ef;
+  --accent:#2a4ed6; --accent-ink:#ffffff; --rung:#f0b12c; --rung-soft:#fdf3dc;
+  --good:#1d8456; --warn:#b87300; --bad:#bf3b28;
+  --display:"Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --body:"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.55 var(--body);}
+h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:2rem} h2{font-size:1.45rem} h3{font-size:1.1rem}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* top bar */
+header.top{border-bottom:1px solid var(--line);background:var(--paper)}
+header.top .wrap{display:flex;align-items:center;gap:24px;min-height:64px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:1.25rem}
+.brand svg{flex:none}
+nav.tabs{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav.tabs a{padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--muted);font-weight:500}
+nav.tabs a[aria-current="page"]{background:var(--ink);color:var(--paper)}
+nav.tabs a:hover{color:var(--ink)}
+nav.tabs a[aria-current="page"]:hover{color:var(--paper)}
+
+main.wrap{padding-top:40px;padding-bottom:72px}
+footer{border-top:1px solid var(--line);padding:20px 0;font-size:.82rem;color:var(--muted)}
+footer a{color:var(--muted)}
+.grid{display:grid;grid-template-columns:220px 1fr;gap:56px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}.ladder{display:none}}
+
+/* ladder rail */
+.ladder{position:sticky;top:20px;display:flex;flex-direction:column;gap:0;padding:6px 0}
+.rung{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;padding:10px 0;position:relative}
+.rung::before{content:"";position:absolute;left:13px;top:38px;bottom:-10px;width:2px;background:var(--line)}
+.rung:last-child::before{display:none}
+.rung .dot{width:28px;height:28px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;font:500 .8rem var(--mono);color:var(--muted);background:var(--surface)}
+.rung b{display:block;font-weight:600;font-size:.95rem}
+.rung span{display:block;font-size:.82rem;color:var(--muted)}
+.rung.on .dot{background:var(--rung);border-color:var(--rung);color:#1b1608}
+.rung.done .dot{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+
+.card{background:var(--surface);padding:4px 0 8px}
+#view-founder .card{border-top:1px solid var(--line);padding-top:24px}
+.eyebrow{font:500 .75rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted);max-width:62ch;margin-top:8px}
+.stack{display:flex;flex-direction:column;gap:18px}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.row>.field{flex:1 1 220px}
+.field{display:flex;flex-direction:column;gap:6px}
+label,.label{font-weight:600;font-size:.9rem}
+.hint{font-size:.82rem;color:var(--muted)}
+input[type=text],input[type=email],input[type=password],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--field)}
+input:hover,select:hover,textarea:hover{border-color:#c9cdd8}
+textarea{resize:vertical;min-height:110px;line-height:1.5}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.seg{grid-template-columns:1fr}}
+.seg label{display:block;border:1.5px solid var(--line);border-radius:11px;padding:12px 14px;cursor:pointer;font-weight:400}
+.seg label b{display:block;font-weight:600}
+.seg label span{font-size:.84rem;color:var(--muted)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked+label{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.seg input:focus-visible+label{outline:3px solid var(--accent);outline-offset:2px}
+
+.btn{text-decoration:none;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:10px;padding:11px 18px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.rungbtn{background:var(--rung);color:#1b1608}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* interview */
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.chip{display:inline-block;font:500 .75rem var(--mono);padding:3px 9px;border-radius:999px;background:var(--rung-soft);color:var(--ink);border:1px solid var(--line)}
+.persona{font-size:.88rem;color:var(--muted)}
+.question{font-family:var(--display);font-size:1.5rem;font-weight:500;line-height:1.3;margin:6px 0 2px;max-width:40ch}
+.followup{border-left:3px solid var(--rung);padding:6px 0 6px 14px;margin-top:6px}
+.timer{font:500 1.9rem var(--mono);font-variant-numeric:tabular-nums}
+.timer.low{color:var(--bad)}
+.timerbox{display:flex;flex-direction:column;align-items:flex-end}
+.bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s linear}
+.mic{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:600;display:inline-flex;gap:8px;align-items:center}
+.mic[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
+.partial{font-size:.88rem;color:var(--muted);min-height:1.3em;font-style:italic}
+.progress{display:flex;gap:6px}
+.progress i{width:26px;height:6px;border-radius:4px;background:var(--line)}
+.progress i.done{background:var(--ink)} .progress i.now{background:var(--rung)}
+.status{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:.92rem}
+.spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}.bar>i{transition:none}}
+.note{padding:14px 16px;border-radius:10px;background:var(--rung-soft);font-size:.9rem}
+.err{color:var(--bad);font-size:.9rem}
+
+/* report */
+.verdict{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+@media (max-width:520px){.verdict{grid-template-columns:1fr}}
+.score{width:116px;height:116px;border-radius:50%;display:grid;place-items:center;font:700 2.2rem var(--display);border:8px solid var(--line);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:600;font-size:.85rem;color:#fff}
+.pill.good{background:var(--good)} .pill.warn{background:var(--warn)} .pill.bad{background:var(--bad)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:640px){.cols{grid-template-columns:1fr}}
+.box{border:1px solid var(--line);border-radius:11px;padding:16px}
+.box ul{margin:8px 0 0;padding-left:18px}
+.box li{margin:4px 0}
+.ans{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ans>summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.ans>summary::-webkit-details-marker{display:none}
+.ans .body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+.dots{display:flex;gap:4px}
+.dots i{width:12px;height:12px;border-radius:3px;background:var(--line)}
+.dots i.f{background:var(--ink)}
+.star{display:flex;gap:6px;flex-wrap:wrap}
+.star span{font:500 .75rem var(--mono);padding:3px 8px;border-radius:6px;border:1px solid var(--line)}
+.star .strong{background:color-mix(in srgb,var(--good) 18%,transparent);border-color:var(--good)}
+.star .weak{background:color-mix(in srgb,var(--warn) 18%,transparent);border-color:var(--warn)}
+.star .missing{background:color-mix(in srgb,var(--bad) 16%,transparent);border-color:var(--bad)}
+.quote{font-size:.9rem;color:var(--muted);border-left:3px solid var(--line);padding-left:12px;white-space:pre-wrap}
+.better{border-left:3px solid var(--good);padding-left:12px}
+.survey{display:flex;flex-direction:column;gap:12px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opts button{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:7px 12px;cursor:pointer}
+.opts button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* founder */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.tile{border:1px solid var(--line);border-radius:11px;padding:14px}
+.tile b{display:block;font:700 1.7rem var(--display);font-variant-numeric:tabular-nums}
+.tile span{font-size:.84rem;color:var(--muted)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 .74rem var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td select{width:auto;padding:5px 8px}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="4" y="2" width="3" height="22" rx="1.5" fill="currentColor"/><rect x="19" y="2" width="3" height="22" rx="1.5" fill="currentColor"/><rect x="5" y="18" width="16" height="3" rx="1.5" fill="#f0b12c"/><rect x="5" y="11" width="16" height="2.4" rx="1.2" fill="currentColor" opacity=".35"/><rect x="5" y="5" width="16" height="2.4" rx="1.2" fill="currentColor" opacity=".35"/></svg>
+      FirstRung
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#practice" data-view="practice">Practice</a>
+      <a href="#people" data-view="people">Talk to a real person</a>
+      
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- PRACTICE -->
+  <section id="view-practice" class="grid">
+    <aside class="ladder" aria-label="Session steps">
+      <div class="rung" data-step="setup"><div class="dot">1</div><div><b>Set up</b><span>Role, format, your experience</span></div></div>
+      <div class="rung" data-step="interview"><div class="dot">2</div><div><b>Answer</b><span>Type or talk, on the clock</span></div></div>
+      <div class="rung" data-step="report"><div class="dot">3</div><div><b>Straight feedback</b><span>Scored like a recruiter would</span></div></div>
+      <div class="rung" data-step="human"><div class="dot">4</div><div><b>Real person</b><span>Live mock or career chat</span></div></div>
+    </aside>
+
+    <div>
+      <!-- setup -->
+      <div class="card stack" id="setup">
+        <div>
+          <div class="eyebrow">Mock interview</div>
+          <h1>Practice the interview you actually have coming up.</h1>
+          <p class="lede">Questions change every session and match your role and year. Feedback is scored the way a screener would score it, so you know where you stand before the real thing.</p>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="role">Role you're interviewing for</label>
+            <select id="role">
+              <option>Product management</option>
+              <option>Software engineering (behavioral)</option>
+              <option>Investment banking / finance</option>
+              <option>Research (science or medical)</option>
+              <option>Consulting</option>
+              <option>Marketing</option>
+              <option>Product / UX design</option>
+              <option value="other">Something else…</option>
+            </select>
+            <input type="text" id="roleOther" class="hidden" placeholder="e.g. Museum education intern" aria-label="Other role">
+          </div>
+          <div class="field">
+            <label for="company">Company <span class="hint">(optional)</span></label>
+            <input type="text" id="company" placeholder="e.g. Johnson &amp; Johnson">
+          </div>
+          <div class="field">
+            <label for="year">Where you are</label>
+            <select id="year">
+              <option>Freshman</option><option selected>Sophomore</option><option>Junior</option><option>Senior</option>
+              <option>Recent grad</option><option>Switching fields</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label" id="fmtLabel">Interview format</span>
+          <div class="seg" role="radiogroup" aria-labelledby="fmtLabel">
+            <div><input type="radio" name="fmt" id="fmtLive" value="live" checked><label for="fmtLive"><b>Live interview</b><span>A person across the table. Expect follow-up questions.</span></label></div>
+            <div><input type="radio" name="fmt" id="fmtRec" value="recorded"><label for="fmtRec"><b>Recorded (HireVue-style)</b><span>30 seconds to think, 90 to answer, one take, no reactions.</span></label></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field" style="flex:0 1 200px">
+            <label for="count">Questions</label>
+            <select id="count"><option value="3">3 (about 10 min)</option><option value="5" selected>5 (about 15 min)</option></select>
+          </div>
+          <div class="field">
+            <label for="focus">Drill a weak spot <span class="hint">(optional)</span></label>
+            <input type="text" id="focus" placeholder="e.g. quantifying results, 'why this company'">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="bg">Your experience <span class="hint">(optional, saved on this device)</span></label>
+          <textarea id="bg" placeholder="Paste resume bullets or jot 3–5 stories. Class projects, clubs, part-time jobs all count.&#10;&#10;e.g. Led a 4-person team in my HCI class to redesign the campus shuttle app; ran 12 user interviews; cut the steps to find a stop from 5 to 2."></textarea>
+          <span class="hint">The interviewer uses this to ask about your real experience, and the feedback checks whether you used your strongest stories.</span>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="startBtn">Start interview</button>
+          <span class="status hidden" id="startStatus"><span class="spin"></span>Writing your questions…</span>
+        </div>
+        <p class="err hidden" id="startErr"></p>
+        
+      </div>
+
+      <!-- interview -->
+      <div class="card stack hidden" id="interview">
+        <div class="qhead">
+          <div class="progress" id="progress" aria-hidden="true"></div>
+          <span class="eyebrow" id="qcount"></span>
+        </div>
+        <div class="persona" id="persona"></div>
+        <div class="qhead" style="align-items:flex-start">
+          <div style="flex:1 1 360px">
+            <span class="chip" id="qtype"></span>
+            <p class="question" id="qtext"></p>
+            <div class="followup hidden" id="fuBox"><div class="eyebrow">Follow-up</div><p class="question" style="font-size:1.2rem" id="fuText"></p></div>
+          </div>
+          <div class="timerbox">
+            <span class="eyebrow" id="phase">Answer</span>
+            <span class="timer" id="timer" aria-live="off">0:00</span>
+          </div>
+        </div>
+        <div class="bar" id="barWrap"><i id="bar"></i></div>
+
+        <div id="prepPane" class="hidden stack">
+          <p class="note">Recorded interviews give you a short prep window. Jot a few words if it helps, then start when you're ready. Your answer timer starts automatically when prep runs out.</p>
+          <div class="actions"><button class="btn" id="beginAnswer">Start answering now</button></div>
+        </div>
+
+        <div id="answerPane" class="stack">
+          <div class="field">
+            <label for="answer">Your answer</label>
+            <textarea id="answer" style="min-height:170px" placeholder="Talk it through with the mic, or type. Answer the way you'd say it out loud."></textarea>
+            <div class="partial" id="partial" aria-live="polite"></div>
+          </div>
+          <div class="actions">
+            <button class="mic hidden" id="micBtn" aria-pressed="false"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="4.5" y="1" width="5" height="8" rx="2.5" fill="currentColor"/><path d="M2.5 6.5a4.5 4.5 0 0 0 9 0M7 11v2" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg><span>Speak answer</span></button>
+            <button class="btn" id="submitAns">Submit answer</button>
+            <span class="hint" id="wc">0 words</span>
+            <span class="status hidden" id="ansStatus"><span class="spin"></span><span id="ansStatusText">Interviewer is listening…</span></span>
+          </div>
+        </div>
+        <div class="actions"><button class="btn ghost" id="quitBtn">End session early</button></div>
+      </div>
+
+      <!-- report -->
+      <div class="card stack hidden" id="report">
+        <div class="status" id="gradeStatus"><span class="spin"></span><span>Scoring your answers. This takes about 20 seconds.</span></div>
+        <div id="reportBody" class="stack hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PEOPLE -->
+  <section id="view-people" class="hidden">
+    <div class="card stack" style="max-width:760px;margin:0 auto">
+      <div>
+        <div class="eyebrow">Real people</div>
+        <h1>Run it with someone who's been in the room.</h1>
+        <p class="lede">We'll pair you with an upperclassman or early-career professional in your target field for 30 minutes. Pick a live mock interview, a chat about whether a company or role fits you, or help turning your projects into stories.</p>
+      </div>
+      <div id="reqStatus" class="note hidden"></div>
+      <form id="reqForm" class="stack" novalidate>
+        <div class="row">
+          <div class="field"><label for="rName">Name</label><input type="text" id="rName" autocomplete="name"></div>
+          <div class="field"><label for="rEmail">Email we should reach you at</label><input type="email" id="rEmail" autocomplete="email"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="rYear">Where you are</label>
+            <select id="rYear"><option>Freshman</option><option selected>Sophomore</option><option>Junior</option><option>Senior</option><option>Recent grad</option><option>Switching fields</option></select></div>
+          <div class="field"><label for="rField">Target role or industry</label><input type="text" id="rField" placeholder="e.g. Private credit, PM at a fintech"></div>
+        </div>
+        <div class="field">
+          <span class="label" id="rKindLabel">What would help most?</span>
+          <div class="seg" role="radiogroup" aria-labelledby="rKindLabel" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+            <div><input type="radio" name="rKind" id="k1" value="Live mock interview" checked><label for="k1"><b>Live mock interview</b><span>Full interview, then candid notes.</span></label></div>
+            <div><input type="radio" name="rKind" id="k2" value="Career and company-fit chat"><label for="k2"><b>Career and fit chat</b><span>What the job is really like, how they got in.</span></label></div>
+            <div><input type="radio" name="rKind" id="k3" value="Story workshop"><label for="k3"><b>Story workshop</b><span>Turn class projects into 4–5 STAR stories.</span></label></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="rCompanies">Companies you're looking at <span class="hint">(optional)</span></label><input type="text" id="rCompanies"></div>
+          <div class="field"><label for="rWhen">When are you free?</label><input type="text" id="rWhen" placeholder="e.g. Weekday evenings, before Nov 25"></div>
+        </div>
+        <div class="field"><label for="rNotes">Anything else? <span class="hint">(optional)</span></label><textarea id="rNotes" style="min-height:80px" placeholder="e.g. I have a superday Monday and freeze on technicals."></textarea></div>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-weight:400"><input type="checkbox" id="rFirstGen" style="margin-top:5px"> <span>I'm the first in my family to go to college or work in this field <span class="hint">(optional; helps us match you with someone who's been there)</span></span></label>
+        <div class="actions"><button class="btn" type="submit" id="reqBtn">Request a session</button><span class="hint">Free during the pilot.</span></div>
+        <p class="err hidden" id="reqErr"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOUNDER -->
+  <section id="view-founder" class="hidden">
+    <div class="stack">
+      <div>
+        <div class="eyebrow">Password protected</div>
+        <h1>Pilot dashboard</h1>
+        <p class="lede">Requests for real people come in here. Match them by hand, update the status, and the student sees it on their page. Session ratings show whether the AI practice is worth coming back to.</p>
+      </div>
+      <form id="loginForm" class="row" style="align-items:flex-end;max-width:480px"><div class="field"><label for="pw">Founder password</label><input type="password" id="pw" autocomplete="current-password"></div><button class="btn" type="submit">Open dashboard</button><p class="err hidden" id="loginErr" style="flex-basis:100%"></p></form>
+      <div id="dash" class="stack hidden">
+      <div class="actions"><button class="btn ghost" id="refreshBtn" type="button">Refresh</button><span class="hint" id="lastLoad"></span></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="card stack">
+        <h2>Requests for a real person</h2>
+        <div class="tablewrap"><table><thead><tr><th>Student</th><th>Wants</th><th>Target</th><th>Free</th><th>Notes</th><th>Status</th></tr></thead><tbody id="reqRows"><tr><td colspan="6" class="hint">Loading…</td></tr></tbody></table></div>
+      </div>
+      <div class="card stack">
+        <h2>Session ratings</h2>
+        <div class="tablewrap"><table><thead><tr><th>When</th><th>Role</th><th>Format</th><th>Score</th><th>Useful</th><th>Would pay for a real person</th></tr></thead><tbody id="fbRows"><tr><td colspan="6" class="hint">Loading…</td></tr></tbody></table></div>
+      </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">FirstRung pilot · <a href="#founder">Founder view</a></div></footer>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
